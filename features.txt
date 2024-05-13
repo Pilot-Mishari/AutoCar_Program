@@ -1,0 +1,9 @@
+These features should be added
+
+1. Driving
+2. Autopilot (SafePark)
+3. Parking (Safepark)
+    3.1 Normal Parking
+    3.2 Parallel parking (beta)
+4. Lighting toggle
+5. AI Assisted Traffic Learning
