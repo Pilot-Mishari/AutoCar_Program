@@ -1,150 +1,178 @@
-/*To-Do
-Add servo for distance
-*/
-
-
 #include <Servo.h>
 #include <AFMotor.h>
 
-int light = 13;
-int ind1 = 4; // right side
-int ind0 = 3; // left side
-int buz = 2;
-int servoPin = 9;
-int trig = 6;
-int echo = 5;
-int res = A0;
-int spd = 255;
+int i = 0; // motor speed
+int pos = 0; //servo position
 
-const int mindist = 20;
+int trig = 13;
+int trig1 = 11;
+int echo = 12;
+int echo1 = 9;
 
-long dur, dist;
-long d1, d2, d3;
-int resVal;
+int normBright = 180; // normal working brightness for back light
+int ind = 255; // indicator use for back light
+int indZ = 0;
 
-Servo ms;
+long dur, dur1, dis1, dis2, dis3; // for front
+long dur0, dur11, dis11, dis22, dis33; //for back
+long disM, disY;
 
-AF_DCMotor m1 (1);
-AF_DCMotor m2 (2);
-AF_DCMotor m3 (3);
-AF_DCMotor m4 (4);
+// light connections see doc for full pins
+backLeft = 6;
+backRight = 5;
+white = 4;
+indicL = 8;
+indiR = 7;
+
+//motor setup
+AF_DCMotor m(1);
+AF_DCMotor m1(2);
+AF_DCMotor m2(3);
+AF_DCMotor m3(4);
+
+//Servo Setup
+Servo dis;
+Servo dis0;
 
 void setup(){
-  pinMode(light, OUTPUT);
-  pinMode(ind1, OUTPUT);
-  pinMode(ind0, OUTPUT);
-  pinMode(trig, OUTPUT);
-  pinMode(buz, OUTPUT);
+  //motor setup
+  m.setSpeed(i);
+  m1.setSpeed(i);
+  m2.setSpeed(i);
+  m3.setSpeed(i);
+  m3.run(RELEASE);
+  m.run(RELEASE);
+  m1.run(RELEASE);
+  m2.run(RELEASE);
+  
+  //servo setup
+  dis.attach(10);
+  dis0.attach(9);
+
+  //ultrasonic sensor setup
+  pinMode(trig,OUTPUT);
   pinMode(echo, INPUT);
-  pinMode(res, INPUT);
-  ms.attach(servoPin);
-  startup();
+  digitalWrite(trig, LOW);
 }
 
-void loop(){
-  // nothing yet
-}
-
-void startup(){
-  digitalWrite(ind0, HIGH);
-  digitalWrite(ind1, HIGH);
-  digitalWrite(buz, HIGH);
-  delay(1000);
-  digitalWrite(ind0, LOW);
-  digitalWrite(ind1, LOW);
-  digitalWrite(buz, LOW);
-  ms.write(90);
-}
-
-void c1(){
+void acc(){
+  // code for acceleration
   
 }
 
-void light(){
-  resVal = analogRead(res);
-  if (resVal < 50){
-    activ(); 
-  }
-  else{
-    deactiv();
-  }
-}
-
-void activ(){
-  digitalWrite(light, HIGH);
-}
-
-void deactiv(){
-  digitalWrite(light, LOW);
-}
-
-void disti(){
-  pinMode(trig, HIGH);
+void checkFront(){
+  //check distance in front
+  dis.write(45);
+  digitalWrite(trig, HIGH);
   delayMicroseconds(10);
-  pinMode(trig, LOW);
-  dur = pulseIn(echo, HIGH);
-  dist = (dur/2)/29.1;
-  
+  digitalWrite(trig, LOW);
+  dur1 = pulseIn(echo, HIGH);
+  dis1 = (dur1*0.039)/2;
+
+  // distance at 90 deg
+  dis.write(90);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  dur1 = pulseIn(echo, HIGH);
+  dis2 = (dur1*0.039)/2;
+
+  // distance at 135
+  dis.write(90);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  dur1 = pulseIn(echo, HIGH);
+  dis3 = (dur1*0.039)/2;
+
+  if(dis2 >= 20){
+    compareFront();
+  }
+  else if (dis2 >= 80){
+    accelerate();
+  }
 }
 
-void checkAndCompare(){
-  ms.write(90);
-  disti();
-  d1 = dist;
-  ms.write(45);
-  disti();
-  d2 = dist;
-  ms.write(135);
-  disti();
-  d3 = dist;
-  compare();
-}
+void checkBack(){
+  // distance at 90 deg
+  dis0.write(90);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  dur11 = pulseIn(echo, HIGH);
+  dis22 = (dur1*0.039)/2;
 
-void compare(){
-  if (d1 > d2 && d1 > d3){
-    speedOrCont();
-  }
-  else if(d1 < d2 || d1 < d3){
-    caut();
-  }
-  else if(d1 <= mindist){
-    chgLn();
+  if(dis22 <= 4){
+    backAction();
   }
   else{
-    // do nothing
+    // do nothing...
   }
 }
 
-void caut(){
-  // caution
-  m1.setSpeed(spd - 40);
-  m2.setSpeed(spd - 40);
-  m3.setSpeed(spd - 40);
-  m4.setSpeed(spd - 40);
-  delay(500);
-  compare();
-}
-
-void chgLn(){
-  // change Lane
-  if (d2 > d3){
-    leftind();
-    // set motor instructions
+void compareFront(){
+  // compare distances and code exe.
+  if (dis2 > 12){
+    //check weather left is larger or right
+    if(dis1 > dis3){
+      // turn left code
+    }
+    else if(dis1 < dis3){
+      // turn right code
+    }
+    else{
+      // do nothing
+    }
   }
-  else if (d2 < d3){
-    rightind();
-    // set motor instructions
-  }
-}
-
-void speedOrCont(){
-  //speed or continue
-  if (spd == 255){
+  else{
     //do nothing
   }
+}
+
+void accelerate(){
+  // acceleration
+  if(dis2 >= 16){
+    i++;
+    checkFront();
+  }
   else{
-    spd = spd - 1;
-    compare();
+    // do nothing yet!
+  }
+}
+
+void backAction(){
+  // action to exe. when back is too close
+
+  // back red indicator
+  for(int irun = 0; irun < 10; irun++){
+    analogWrite(backLeft, ind);
+    analogWrite(backRight, ind);
+    delay(75);
+    analogWrite(backLeft, indZ);
+    analogWrite(backRight, indZ);
   }
   
+}
+
+void save(){
+  // code here will be put on standby with info
+
+  // for checking lane before turning. will check back
+  // check distance in back
+  dis0.write(45);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  dur11 = pulseIn(echo, HIGH);
+  dis11 = (dur1*0.039)/2;
+
+  // distance at 135
+  dis0.write(90);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  dur11 = pulseIn(echo, HIGH);
+  dis33 = (dur1*0.039)/2;
+
+  // must also add for 90
 }
